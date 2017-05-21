@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Pocket Subtitles</string>
+    <string name="follow">Following</string>
+    <string name="nofollow">Not following</string>
+    <string name="timestamp">Timestamp</string>
+    <string name="subtitle_text">Subtitle text</string>
+    <string name="speedLabel">Speed:</string>
+    <string name="open_file">Open Srt File</string>
+</resources>
