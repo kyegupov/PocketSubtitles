@@ -39,44 +39,48 @@ class SubtitleListAdapter(val objects: List<Subtitle>)
 
 class SimpleViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
 
-class ListScrollListener(val activity: MainActivity) : RecyclerView.OnScrollListener() {
+class ListScrollListener(val state: AppState) : RecyclerView.OnScrollListener() {
     override fun onScrolled(listView: RecyclerView, dx: Int, dy: Int){
-        if (activity.toggleFollow!!.isChecked) {
+        if (state.toggleFollow.isChecked) {
             return
         }
-        val watermarkY = activity.watermark!!.top
+        val watermarkY = state.watermark.top
         val itemView = listView.findChildViewUnder(10f, watermarkY.toFloat())
         if (itemView != null) {
             val itemIndex = listView.getChildAdapterPosition(itemView)
-            val sub = activity.subtitles[itemIndex]
+            val sub = state.subtitles[itemIndex]
             val startSeconds = sub.startTime.totalMillis
             val endSeconds = sub.endTime.totalMillis
             val relativeInItem = (watermarkY - itemView.y) / itemView.measuredHeight
             val time = startSeconds + (endSeconds - startSeconds) * relativeInItem
-            activity.timeLabel!!.text = Timestamp.fromTotalMillis(time.toLong()).compile()
+            state.timeLabel.text = Timestamp.fromTotalMillis(time.toLong()).compile()
         }
     }
 }
 
+data class AppState(
+    // Widgets
+    var listView: RecyclerView,
+    var watermark : View,
+    var timeLabel: TextView,
+    var toggleFollow: ToggleButton,
+
+    // Data
+    var offsetMillis: Long,
+    var subtitles : List<Subtitle>,
+    var startingTimestamps: List<Timestamp>
+)
+
 class MainActivity : AppCompatActivity() {
 
     private val  FILE_SELECT_CODE = 100
-
-    internal var watermark : View? = null
-    internal var subtitles : List<Subtitle> = listOf()
-    internal var timeLabel: TextView? = null
-    internal var offsetMillis: Long? = null
-    internal var toggleFollow: ToggleButton? = null
-    private var startingTimestamps: List<Timestamp> = listOf()
-    private var listView: RecyclerView? = null
+    internal var state: AppState? = null
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         val inflater = menuInflater
         inflater.inflate(R.menu.main_menu, menu)
         return true
     }
-
-
 
     private fun openFile() {
         val myIntent = Intent(Intent.ACTION_GET_CONTENT, null)
@@ -104,7 +108,7 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == FILE_SELECT_CODE) {
             if (resultCode == Activity.RESULT_OK) {
                     val uri = data.data
-                    loadSubs(contentResolver.openInputStream(uri))
+                    loadSubs(contentResolver.openInputStream(uri), state!!)
             }
         }
     }
@@ -114,12 +118,21 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        listView = findViewById(R.id.subs_list) as RecyclerView
+        val state = AppState(
+            watermark = findViewById(R.id.watermark) as View,
+            timeLabel = findViewById(R.id.current_time) as TextView,
+            offsetMillis = 0,
+            toggleFollow = findViewById(R.id.toggle_follow) as ToggleButton,
+            listView = findViewById(R.id.subs_list) as RecyclerView,
+            subtitles = listOf(),
+            startingTimestamps = listOf()
+        )
+        this.state = state
 
         val mLayoutManager = LinearLayoutManager(this)
-        listView?.layoutManager = mLayoutManager
+        state.listView.layoutManager = mLayoutManager
 
-        listView?.setHasFixedSize(true)
+        state.listView.setHasFixedSize(true)
 // TODO: enable speed controls
 //        val SPEEDS = listOf("24/30","25/30","24/25","1","25/24","30/25","30/24")
 
@@ -133,40 +146,35 @@ class MainActivity : AppCompatActivity() {
 
         val testSubStream = this.resources.openRawResource(R.raw.test)
 
-        loadSubs(testSubStream)
+        loadSubs(testSubStream, state)
 
-        listView?.addOnScrollListener(ListScrollListener(this))
-
-        watermark = findViewById(R.id.watermark) as View
-
-        timeLabel = findViewById(R.id.current_time) as TextView
+        state.listView.addOnScrollListener(ListScrollListener(state))
 
         var timer = null as Timer?
         val activity = this
 
-        toggleFollow = findViewById(R.id.toggle_follow) as ToggleButton
-        toggleFollow!!.setOnClickListener {
+        state.toggleFollow.setOnClickListener {
             val tb = it as ToggleButton
             if (tb.isChecked) {
                 timer = Timer()
                 val advanceTime = object : TimerTask() {
                     override fun run() {
                         activity.runOnUiThread {
-                            val timestamp = Timestamp.fromTotalMillis(System.currentTimeMillis() - offsetMillis!!)
-                            timeLabel!!.text = timestamp.compile()
-                            val binSearchIndex = startingTimestamps.binarySearch(timestamp)
+                            val timestamp = Timestamp.fromTotalMillis(System.currentTimeMillis() - state.offsetMillis)
+                            state.timeLabel.text = timestamp.compile()
+                            val binSearchIndex = state.startingTimestamps.binarySearch(timestamp)
                             val subtitleToScrollTo = if (binSearchIndex > 0) {
                                 if (binSearchIndex < 1) 1 else binSearchIndex
                             } else {
                                 val previousItem = -2 - binSearchIndex
                                 if (previousItem < 1) 1 else previousItem
                             }
-                            val viewHolder = listView?.findViewHolderForAdapterPosition(subtitleToScrollTo)
+                            val viewHolder = state.listView.findViewHolderForAdapterPosition(subtitleToScrollTo)
                             if (viewHolder == null) {
-                                listView?.scrollToPosition(subtitleToScrollTo)
+                                state.listView.scrollToPosition(subtitleToScrollTo)
                             } else {
-                                val watermarkY = activity.watermark!!.top
-                                listView?.scrollBy(0, viewHolder.itemView.top - watermarkY)
+                                val watermarkY = state.watermark.top
+                                state.listView.scrollBy(0, viewHolder.itemView.top - watermarkY)
                             }
 
                         }
@@ -175,16 +183,14 @@ class MainActivity : AppCompatActivity() {
 
                 }
                 timer!!.schedule(advanceTime, 100 /* ms */, 100 /* ms */)
-                offsetMillis = System.currentTimeMillis() - Timestamp(timeLabel!!.text).totalMillis
-//                listView.isLayoutFrozen = true
+                state.offsetMillis = System.currentTimeMillis() - Timestamp(state.timeLabel.text).totalMillis
             } else {
                 timer!!.cancel()
-//                listView.isLayoutFrozen = false
             }
         }
     }
 
-    private fun loadSubs(testSubStream: InputStream) {
+    private fun loadSubs(testSubStream: InputStream, state: AppState) {
         val subsFile = SubtitleFile(testSubStream)
         val subsWithPadding = mutableListOf<Subtitle>()
         subsWithPadding.add(Subtitle(
@@ -196,9 +202,9 @@ class MainActivity : AppCompatActivity() {
                 Timestamp.fromTotalMillis(999999999),
                 Timestamp.fromTotalMillis(999999999),
                 Collections.nCopies(30, "")))
-        subtitles = subsWithPadding
+        state.subtitles = subsWithPadding
 
-        this.startingTimestamps = subtitles.map {it.startTime}
-        this.listView?.adapter = SubtitleListAdapter(subtitles)
+        state.startingTimestamps = state.subtitles.map {it.startTime}
+        state.listView.adapter = SubtitleListAdapter(state.subtitles)
     }
 }
