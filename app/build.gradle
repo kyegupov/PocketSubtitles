@@ -24,10 +24,11 @@ android {
 }
 
 dependencies {
-    compile fileTree(include: ['*.jar'], dir: 'libs')
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
     androidTestImplementation('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
+    implementation 'com.android.support:recyclerview-v7:27.1.1'
     implementation 'com.android.support:appcompat-v7:27.1.1'
     implementation 'com.android.support:percent:27.1.1'
     implementation 'com.android.support:design:27.1.1'
@@ -37,4 +38,5 @@ dependencies {
 }
 repositories {
     mavenCentral()
+    google()
 }

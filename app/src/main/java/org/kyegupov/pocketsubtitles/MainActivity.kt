@@ -4,15 +4,15 @@ import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
-import android.widget.*
 import com.jonathanedgecombe.srt.Subtitle
 import com.jonathanedgecombe.srt.SubtitleFile
 import com.jonathanedgecombe.srt.Timestamp
 import java.util.*
 import android.app.Activity
-import android.content.Context
 import android.view.*
 import android.content.Intent
+import android.widget.TextView
+import android.widget.ToggleButton
 import java.io.InputStream
 
 
@@ -60,15 +60,15 @@ class ListScrollListener(val state: AppState) : RecyclerView.OnScrollListener() 
 
 data class AppState(
     // Widgets
-    var listView: RecyclerView,
-    var watermark : View,
-    var timeLabel: TextView,
-    var toggleFollow: ToggleButton,
+        var listView: RecyclerView,
+        var watermark : View,
+        var timeLabel: TextView,
+        var toggleFollow: ToggleButton,
 
     // Data
-    var offsetMillis: Long,
-    var subtitles : List<Subtitle>,
-    var startingTimestamps: List<Timestamp>
+        var offsetMillis: Long,
+        var subtitles : List<Subtitle>,
+        var startingTimestamps: List<Timestamp>
 )
 
 class MainActivity : AppCompatActivity() {
