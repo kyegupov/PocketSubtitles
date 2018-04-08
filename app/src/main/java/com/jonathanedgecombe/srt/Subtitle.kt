@@ -41,8 +41,8 @@ data class Subtitle(var startTime: Timestamp,
 
     companion object {
 
-        fun formatLine(line: String): String {
-            var line = line
+        fun formatLine(line0: String): String {
+            var line = line0
             /* Replace CRLF with LF for neatness. */
             line = line.replace("\r\n", "\n")
 
