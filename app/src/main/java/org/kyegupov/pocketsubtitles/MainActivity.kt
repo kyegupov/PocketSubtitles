@@ -169,12 +169,18 @@ class MainActivity : AppCompatActivity() {
                                 val previousItem = -2 - binSearchIndex
                                 if (previousItem < 1) 1 else previousItem
                             }
+                            val currentSubtitle = state.subtitles[subtitleToScrollTo]
+                            var progress = (1.0 * (timestamp.totalMillis - currentSubtitle.startTime.totalMillis)
+                                    / (currentSubtitle.endTime.totalMillis - currentSubtitle.startTime.totalMillis))
+                            if (progress > 1) {
+                                progress = 1.0
+                            }
                             val viewHolder = state.listView.findViewHolderForAdapterPosition(subtitleToScrollTo)
                             if (viewHolder == null) {
                                 state.listView.scrollToPosition(subtitleToScrollTo)
                             } else {
                                 val watermarkY = state.watermark.top
-                                state.listView.scrollBy(0, viewHolder.itemView.top - watermarkY)
+                                state.listView.scrollBy(0, viewHolder.itemView.top + (viewHolder.itemView.height * progress).toInt() - watermarkY)
                             }
 
                         }
